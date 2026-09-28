@@ -1,0 +1,41 @@
+# Secrets / environment files (API keys, project settings)
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ADK local state (session DBs, artifacts)
+.adk/
+*.db
+
+# ADK / Cloud Run / Agent Engine temp build folders
+cr_build/
+cloud_run_deploy_src/
+**/app_utils/.requirements.txt
+
+# Terraform state and local vars
+.terraform*
+*.tfstate*
+*.tfvars
+
+# Credentials
+*credentials*.json
+*service-account*.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
