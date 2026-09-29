@@ -1,0 +1,9 @@
+# Valid product (goes through QR ID + description in parallel, then the catalog)
+Product Name: Wireless Headphones
+Category: Electronics
+Price: 79.99
+
+# Invalid product (rejected: unknown category and a negative price)
+Product Name: Mystery Box
+Category: Toys
+Price: -5

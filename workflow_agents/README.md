@@ -5,6 +5,8 @@
 | `sequential_agent/` | Steps run **one after another** | Support ticket triage |
 | `parallel_agent/` | Steps run **at the same time**, then combine | Trip planner |
 | `loop_agent/` | A step **repeats** until a condition is met, or a round limit | News summarizer (under 500 words) |
+| `graph_agent/` | **All in one graph:** sequence, conditional routing, parallel branches and a join | Product catalog onboarding (see [graph_agent/README.md](graph_agent/README.md)) |
+| `dynamic_agent/` | **Dynamic:** a Python node picks the path at run time with `ctx.run_node` | Product catalog by category (see [dynamic_agent/README.md](dynamic_agent/README.md)) |
 
 ## `sequential_agent`: Support Ticket Triage
 
