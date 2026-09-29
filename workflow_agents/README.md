@@ -7,6 +7,7 @@
 | `loop_agent/` | A step **repeats** until a condition is met, or a round limit | News summarizer (under 500 words) |
 | `graph_agent/` | **All in one graph:** sequence, conditional routing, parallel branches and a join | Product catalog onboarding (see [graph_agent/README.md](graph_agent/README.md)) |
 | `dynamic_agent/` | **Dynamic:** a Python node picks the path at run time with `ctx.run_node` | Product catalog by category (see [dynamic_agent/README.md](dynamic_agent/README.md)) |
+| `collaborative_agent/` | **Collaboration:** a coordinator calls helper agents (`task` / `single_turn` mode) and combines their results | Party planner (see [collaborative_agent/README.md](collaborative_agent/README.md)) |
 
 ## `sequential_agent`: Support Ticket Triage
 
