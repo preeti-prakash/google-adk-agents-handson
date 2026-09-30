@@ -1,15 +1,15 @@
-# crewai_scraper_agent: ADK agent that uses a built-in CrewAI tool
+# a007_crewai_scraper_agent: ADK agent that uses a built-in CrewAI tool
 # (ScrapeWebsiteTool) to read web pages and answer questions about them.
 #
 # - Model access: Gemini on Vertex AI (Agent Platform) with gcloud ADC, same setup
-#   as vertex_agent. Copy .env.example to .env and set your project.
+#   as a002_vertex_agent. Copy .env.example to .env and set your project.
 # - Tool: CrewAI's ScrapeWebsiteTool, wrapped for ADK with CrewaiTool.
 #   ADK can use any CrewAI tool this way.
 # - CrewAI needs Python < 3.14, so this agent runs from its own venv:
 #     uv venv .venv-crewai --python 3.13
 #     uv pip install --python .venv-crewai/bin/python "google-adk==2.8.0" crewai-tools
 # - Run locally: .venv-crewai/bin/adk web (http://localhost:8000),
-#   then pick crewai_scraper_agent.
+#   then pick a007_crewai_scraper_agent.
 
 from crewai_tools import ScrapeWebsiteTool
 from google.adk.agents.llm_agent import Agent

@@ -34,7 +34,7 @@ So the **`description`** of each sub-agent is what drives the routing. Keep it c
 ## Project structure
 
 ```text
-employee-helpdesk/
+a008_employee-helpdesk/
 ├── employee_helpdesk/
 │   ├── __init__.py
 │   ├── agent.py          # root_agent (employee_helpdesk) with sub_agents
@@ -78,7 +78,7 @@ cp employee_helpdesk/.env.example employee_helpdesk/.env
 
 ## Run locally
 
-Run from the `employee-helpdesk` folder:
+Run from the `a008_employee-helpdesk` folder:
 
 ```bash
 adk web      # http://localhost:8000, then pick employee_helpdesk
@@ -100,7 +100,7 @@ In the web UI, the **Events** panel shows each `transfer_to_agent` call and whic
 
 ## Deploy to Vertex AI Agent Engine
 
-Run from the `employee-helpdesk` folder:
+Run from the `a008_employee-helpdesk` folder:
 
 ```bash
 adk deploy agent_engine \

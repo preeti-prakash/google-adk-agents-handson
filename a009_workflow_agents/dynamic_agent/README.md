@@ -25,7 +25,7 @@ The graph itself has only one edge: `("START", product_workflow)`. Everything el
 From the `adk-fundamentals` folder:
 
 ```bash
-adk web      # pick workflow_agents.dynamic_agent
+adk web      # pick a009_workflow_agents.dynamic_agent
 ```
 
 Input format: `<name>, <category>`

@@ -1,15 +1,15 @@
-# bigquery_agent: ADK agent that answers HR questions from BigQuery using the
+# a005_bigquery_agent: ADK agent that answers HR questions from BigQuery using the
 # built-in BigQuery toolset (list datasets, list tables, inspect schemas, run SQL).
 #
 # - Model access: Gemini on Vertex AI (Agent Platform) with gcloud ADC, same setup
-#   as vertex_agent. Copy .env.example to .env and set your project.
+#   as a002_vertex_agent. Copy .env.example to .env and set your project.
 # - BigQuery access: also uses your gcloud ADC login. Enable the API once:
 #     gcloud services enable bigquery.googleapis.com
 # - Data: dataset `hr_data` with tables `employee_info` and `employee_leaves`,
 #   created by setup_hr_data.sql. The tables share emp_id (no foreign key).
 # - Read-only: write_mode=BLOCKED, so the agent can only run SELECT queries.
 # - Needs: pip install "google-adk[gcp]"
-# - Run locally: `adk web` (http://localhost:8000) and pick bigquery_agent.
+# - Run locally: `adk web` (http://localhost:8000) and pick a005_bigquery_agent.
 
 import os
 

@@ -1,12 +1,12 @@
-# wikipedia_agent: ADK agent that uses a built-in LangChain tool (Wikipedia)
+# a006_wikipedia_agent: ADK agent that uses a built-in LangChain tool (Wikipedia)
 # to answer factual questions.
 #
 # - Model access: Gemini on Vertex AI (Agent Platform) with gcloud ADC, same setup
-#   as vertex_agent. Copy .env.example to .env and set your project.
+#   as a002_vertex_agent. Copy .env.example to .env and set your project.
 # - Tool: LangChain's WikipediaQueryRun, wrapped for ADK with LangchainTool.
 #   ADK can use any LangChain tool this way.
 # - Needs: pip install langchain-community wikipedia
-# - Run locally: `adk web` (http://localhost:8000) and pick wikipedia_agent.
+# - Run locally: `adk web` (http://localhost:8000) and pick a006_wikipedia_agent.
 
 import wikipedia
 from google.adk.agents.llm_agent import Agent

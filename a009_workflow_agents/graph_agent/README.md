@@ -46,8 +46,8 @@ root_agent = Workflow(
 From the `adk-fundamentals` folder (with `.env` set up like the other agents):
 
 ```bash
-pip install -r workflow_agents/graph_agent/requirements.txt
-adk web      # pick workflow_agents.graph_agent
+pip install -r a009_workflow_agents/graph_agent/requirements.txt
+adk web      # pick a009_workflow_agents.graph_agent
 ```
 
 ## Sample input and output

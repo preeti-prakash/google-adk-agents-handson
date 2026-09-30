@@ -46,10 +46,10 @@ root_agent = Workflow(
 
 ### Run
 
-From the `adk-fundamentals` folder (with `.env` set up like `vertex_agent`):
+From the `adk-fundamentals` folder (with `.env` set up like `a002_vertex_agent`):
 
 ```bash
-adk web      # pick workflow_agents.sequential_agent
+adk web      # pick a009_workflow_agents.sequential_agent
 ```
 
 Try: *"Hi, I'm Priya. My laptop arrived with a cracked screen. I need a replacement urgently."*
@@ -100,7 +100,7 @@ root_agent = Workflow(
 ### Run
 
 ```bash
-adk web      # pick workflow_agents.parallel_agent
+adk web      # pick a009_workflow_agents.parallel_agent
 ```
 
 Try: *"Plan a weekend trip to Paris"*, or any other city.
@@ -167,7 +167,7 @@ In `agent.py`: `MAX_WORDS = 500` (the target) and `MAX_ROUNDS = 4` (a safety lim
 ### Run
 
 ```bash
-adk web      # pick workflow_agents.loop_agent
+adk web      # pick a009_workflow_agents.loop_agent
 ```
 
 Try: *"Latest AI news"*, *"Space exploration news this week"* or *"Electric vehicle industry news"*.

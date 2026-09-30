@@ -1,6 +1,6 @@
 # Party Planner: ADK 2.0 Collaborative Agents
 
-A **coordinator** works together with three helper agents. Unlike a transfer (as in `employee-helpdesk`), the coordinator **stays in charge**: it calls each helper like a tool, gets the result back, and combines everything.
+A **coordinator** works together with three helper agents. Unlike a transfer (as in `a008_employee-helpdesk`), the coordinator **stays in charge**: it calls each helper like a tool, gets the result back, and combines everything.
 
 ```text
 coordinator (root)
@@ -24,7 +24,7 @@ Setting `mode='task'` or `mode='single_turn'` is all it takes. ADK turns those s
 From the `adk-fundamentals` folder (with `.env` set up like the other agents):
 
 ```bash
-adk web      # pick workflow_agents.collaborative_agent
+adk web      # pick a009_workflow_agents.collaborative_agent
 ```
 
 ## Example conversation (real test run)
