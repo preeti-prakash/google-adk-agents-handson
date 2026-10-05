@@ -1,0 +1,8 @@
+.env
+.venv
+__pycache__
+*.pyc
+agent.py
+README.md
+Dockerfile
+.dockerignore

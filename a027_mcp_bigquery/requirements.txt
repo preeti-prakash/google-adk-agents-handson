@@ -1,0 +1,4 @@
+# MCP v1 API (FastMCP); mcp 2.x renamed it
+mcp<2
+google-cloud-bigquery
+python-dotenv

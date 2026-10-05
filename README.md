@@ -21,6 +21,9 @@ Hands-on examples for Google's **Agent Development Kit (ADK)**, numbered in the 
 | 19–20 | `a019_artifact/`, `a020_dynamic_report/` | **Artifacts**: saving files, with versions | `adk web` | [15](#15-artifacts-a019a020) |
 | 21 | `a021_callbacks/` | **Callbacks**: logging, a guardrail, changing tool results | `adk web` | [16](#16-a021_callbacks-callbacks) |
 | 22–24 | `a022_ollama_chat/` … `a024_ollama_agent/` | **Local models with Ollama**, and an ADK agent on Ollama via **LiteLLM** | `python main.py` / `adk web` | [17](#17-local-models-with-ollama-a022a024) |
+| 25 | `a025_mcp_server/` | **MCP server** + client + ADK agent (`McpToolset`); server **deployed to Cloud Run** | `python server.py` / `adk web` | [18](#18-mcp-servers-a025a027) |
+| 26 | `a026_mcp_database/` | MCP server over a **local database** (SQLite) + ADK agent | `python server.py` + `adk web` | [18](#18-mcp-servers-a025a027) |
+| 27 | `a027_mcp_bigquery/` | MCP server over a **remote database** (BigQuery), locally and **on Cloud Run** | `python server.py` + `adk web` | [18](#18-mcp-servers-a025a027) |
 
 > Note: Google renamed **Vertex AI** to **Agent Platform** in the Console. The API ID is still `aiplatform.googleapis.com`, and the code and environment variables still use the old "Vertex" names.
 
@@ -37,7 +40,7 @@ adk web          # http://localhost:8000, then pick the agent from the dropdown
 
 The dropdown lists every agent, including nested ones like `a009_workflow_agents.sequential_agent` and `a008_employee-helpdesk.employee_helpdesk`. `adk web` reads each agent's `.env` only at startup, so restart it after changing one.
 
-The folders with a `main.py` (a013–a018, a022, a023) are plain Python scripts, not `adk web` agents. Run them with `python <folder>/main.py`.
+The folders with a `main.py` (a013–a018, a022, a023) are plain Python scripts, not `adk web` agents. Run them with `python <folder>/main.py`. The MCP folders (a025–a027) also have a `server.py` that must be running before you use their agent.
 
 Most agents use the same Vertex AI `.env` as `a002_vertex_agent` (section 2). Copy it with `cp <folder>/.env.example <folder>/.env` and set `GOOGLE_CLOUD_PROJECT`. **Never commit `.env` files**; `.gitignore` already excludes them.
 
@@ -75,6 +78,8 @@ Extra packages some folders need (all in `.venv`):
 | `greenlet` | a015 (`DatabaseSessionService` with async SQLAlchemy) |
 | `ollama` | a022 |
 | `litellm` | a024 (non-Gemini models in ADK) |
+| `mcp<2` | a025–a027 (the code uses the MCP v1 `FastMCP` API, renamed in 2.x) |
+| `google-cloud-bigquery` | a027 |
 | [Ollama app](https://ollama.com) + `ollama pull llama3.2` / `ollama pull gemma3` | a022–a024 |
 
 a007 (CrewAI) needs Python < 3.14, so it uses a separate venv; see section 7.
@@ -888,7 +893,276 @@ Small local models are reliable at **calling** a tool but not at deciding **when
 
 ---
 
-## 18. Comparison
+## 18. MCP servers (a025–a027)
+
+**MCP (Model Context Protocol)** is an open standard for giving AI apps tools and data. You write an **MCP server** that offers tools, and any **MCP client** can discover and call them: an ADK agent, Claude Desktop, an IDE, or a script.
+
+```
+You ──► ADK agent (Gemini decides) ──McpToolset──► MCP server (runs the tool) ──► data / database
+```
+
+- **The agent** decides *which* tool to call. **The server** controls *what* each tool does, such as which SQL it runs. The agent can't do anything the tools don't allow.
+- ADK connects with **`McpToolset`**, which discovers the server's tools and gives them to the agent. It passes on **tools only, not MCP resources**, which is why everything in these servers is a tool.
+- The servers use **`mcp<2`** (the `FastMCP` API). `pip install mcp` gets 2.x, where `FastMCP` was renamed, and the import fails.
+
+### What was built and tested
+
+| # | Setup | Server | Data | Agent connects to |
+|---|---|---|---|---|
+| 1 | MCP server, **local** | a025 `server.py` on your Mac | Python list | `http://localhost:8000/mcp` |
+| 2 | MCP server on **Cloud Run** | a025 on Cloud Run (`employee-mcp`) | Python list | `https://employee-mcp-…run.app/mcp` |
+| 3 | MCP + **local database** | a026 `server.py` on your Mac | SQLite file `employees.db` | `http://localhost:8001/mcp/local` |
+| 4 | MCP + **remote database**, server local | a027 `server.py` on your Mac | BigQuery `employee_mcp.employees` | `http://localhost:8002/mcp/bq` |
+| 5 | MCP + **remote database**, server on **Cloud Run** | a027 on Cloud Run (`employee-bq-mcp`) | BigQuery | `https://employee-bq-mcp-…run.app/mcp/bq` |
+
+Each folder has its own README with full details: [a025](a025_mcp_server/README.md), [a026](a026_mcp_database/README.md), [a027](a027_mcp_bigquery/README.md).
+
+### Ports and paths
+
+| Program | Port | MCP path |
+|---|---|---|
+| `adk web` | 8000 | — |
+| a025 server (local) | 8000 by default, so stop `adk web` first or run `PORT=8001 python a025_mcp_server/server.py` | `/mcp` |
+| a026 server | 8001 | `/mcp/local` |
+| a027 server | 8002 | `/mcp/bq` |
+| Any server on Cloud Run | 8080 inside the container; you call the `https://…run.app` URL | same path |
+
+The servers use different ports so they can all run alongside `adk web`. If two programs try to use the same port, you get `address already in use`.
+
+### 18.1 a025: MCP server and client, locally
+
+`server.py` has two tools, `get_employee(employee_id)` and `get_all_employees()`, over a Python list. `client.py` connects, lists the tools and calls both.
+
+```bash
+# Terminal 1 (stop adk web first: both use port 8000)
+python a025_mcp_server/server.py
+
+# Terminal 2 (client.py's server_url must be http://localhost:8000/mcp)
+python a025_mcp_server/client.py
+```
+
+```
+TOOLS:
+- get_employee
+- get_all_employees
+
+Tool Result:
+... text='{"id": 101, "name": "Preeti", ...}' ... isError=False
+```
+
+**In the browser** with the MCP Inspector: run `npx @modelcontextprotocol/inspector`, choose **Streamable HTTP**, enter the server URL, click **Connect**, then **Tools → List Tools → Run Tool**.
+
+### 18.2 a025: MCP server on Cloud Run
+
+To work in a container on Cloud Run, the server needed three settings, read from the environment so local runs still work:
+
+| Setting | Local | Cloud Run | Why |
+|---|---|---|---|
+| `host` | `127.0.0.1` | `0.0.0.0` (Dockerfile) | Cloud Run reaches the container from outside. On `127.0.0.1` the server rejects the `*.run.app` address. |
+| `port` | `8000` | `PORT=8080` (set by Cloud Run) | Cloud Run sends requests to `PORT` |
+| `stateless_http` | `True` | `True` | Each request may go to a different container |
+
+Deploy (from the `a025_mcp_server` folder, project `newaiproject-510015`):
+
+```bash
+gcloud config set project newaiproject-510015
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+
+gcloud projects add-iam-policy-binding newaiproject-510015 \
+  --member="serviceAccount:854814512954-compute@developer.gserviceaccount.com" \
+  --role="roles/run.builder"
+
+gcloud artifacts repositories create mcp-servers --repository-format=docker --location=us-central1
+
+gcloud builds submit --tag us-central1-docker.pkg.dev/newaiproject-510015/mcp-servers/employee-mcp:v1
+
+gcloud run deploy employee-mcp \
+  --image us-central1-docker.pkg.dev/newaiproject-510015/mcp-servers/employee-mcp:v1 \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+Test it from the laptop. Point `client.py` at the Cloud Run URL and run it:
+
+```python
+server_url = "https://employee-mcp-854814512954.us-central1.run.app/mcp"
+```
+
+```bash
+python a025_mcp_server/client.py
+```
+
+Or with `curl`:
+
+```bash
+curl -X POST "https://employee-mcp-854814512954.us-central1.run.app/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_employee","arguments":{"employee_id":101}}}'
+```
+
+**The ADK agent** (`a025_mcp_server/agent.py`) uses the Cloud Run URL in `McpToolset`. Run `adk web`, pick `a025_mcp_server`, and ask *"Who is employee 101?"*.
+
+### 18.3 a026: MCP server over a local database (SQLite)
+
+`database.py` creates `employees.db` with an `employees` table (`id`, `name`, `department`, `role`) and three demo rows. `server.py` has four tools that run SQL:
+
+| Tool | SQL | Type |
+|---|---|---|
+| `get_employee(employee_id)` | `SELECT … WHERE id = ?` | Read |
+| `get_employees_by_department(department)` | `SELECT … WHERE LOWER(department) = LOWER(?)` | Read |
+| `get_all_employees()` | `SELECT … FROM employees` | Read |
+| `add_employee(employee_id, name, department, role)` | `INSERT INTO employees …` | **Write** |
+
+Values from the model are passed as **query parameters** (`?`), never pasted into the SQL, which protects against SQL injection.
+
+```bash
+# Terminal 1: start the server first (creates employees.db if needed)
+python a026_mcp_database/server.py          # http://127.0.0.1:8001/mcp/local
+
+# Terminal 2
+adk web                                      # pick a026_mcp_database
+```
+
+Try: *"Who is employee 102?"*, *"Who works in AI Engineering?"*, *"Add employee 104, Ravi, Cloud Engineering, DevOps Engineer"*, *"List all employees"*, *"Add employee 101, Test, X, Y"* (refused, because the ID exists).
+
+See the data:
+
+```bash
+sqlite3 -header -column a026_mcp_database/employees.db "SELECT * FROM employees;"
+```
+
+Interactive: `sqlite3 a026_mcp_database/employees.db`, then `.tables`, `.schema employees`, `SELECT * FROM employees;`, `.quit`. Reset by stopping the server and deleting `employees.db`.
+
+### 18.4 a027: MCP server over a remote database (BigQuery), server local
+
+The same four tools and the same agent as a026; only the database changes.
+
+| | a026 | a027 |
+|---|---|---|
+| Data | `employees.db` on your Mac | BigQuery table `gen-lang-client-0540105794.employee_mcp.employees` |
+| Connection | `sqlite3.connect(...)` | `bigquery.Client(project=...)` with your gcloud login (ADC) |
+| Parameters | `WHERE id = ?` | `WHERE id = @employee_id` + `ScalarQueryParameter` |
+| Duplicate IDs | Blocked by `PRIMARY KEY` | BigQuery has no enforced primary key, so `add_employee` checks first |
+
+```bash
+pip install google-cloud-bigquery "mcp<2"
+python a027_mcp_bigquery/database.py         # creates dataset, table and demo rows (also done on server start)
+
+# Terminal 1
+python a027_mcp_bigquery/server.py           # http://127.0.0.1:8002/mcp/bq
+
+# Terminal 2 (agent.py URL: http://localhost:8002/mcp/bq)
+adk web                                       # pick a027_mcp_bigquery
+```
+
+Try the same prompts as a026, plus *"Who is an AI engineer?"* (Sarah).
+
+See the data:
+
+```bash
+bq query --use_legacy_sql=false 'SELECT * FROM `gen-lang-client-0540105794.employee_mcp.employees` ORDER BY id'
+bq ls employee_mcp
+bq show employee_mcp.employees
+```
+
+Or in the Console: **BigQuery → employee_mcp → employees → Preview**.
+
+### 18.5 a027: BigQuery MCP server on Cloud Run
+
+Now nothing runs on your Mac except the agent:
+
+```
+adk web (Mac) ──► Cloud Run: employee-bq-mcp ──► BigQuery
+```
+
+The server gets the same `HOST` / `PORT` / `stateless_http` settings as a025. It also needs:
+- **Its own service account with BigQuery access.** Locally the server used your login; on Cloud Run it runs as `employee-bq-mcp`.
+- **`GOOGLE_CLOUD_PROJECT` as an environment variable**, because `.env` isn't copied into the image.
+
+Deploy (from the `a027_mcp_bigquery` folder, in the project that holds the BigQuery table):
+
+```bash
+gcloud config set project gen-lang-client-0540105794
+gcloud config get-value project              # must print gen-lang-client-0540105794
+
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com bigquery.googleapis.com \
+  --project gen-lang-client-0540105794
+
+gcloud projects add-iam-policy-binding gen-lang-client-0540105794 \
+  --member="serviceAccount:681195791124-compute@developer.gserviceaccount.com" \
+  --role="roles/run.builder"
+
+# Service account for the server, with BigQuery access
+gcloud iam service-accounts create employee-bq-mcp \
+  --display-name="Employee BigQuery MCP server" --project gen-lang-client-0540105794
+
+gcloud projects add-iam-policy-binding gen-lang-client-0540105794 \
+  --member="serviceAccount:employee-bq-mcp@gen-lang-client-0540105794.iam.gserviceaccount.com" \
+  --role="roles/bigquery.jobUser"
+
+gcloud projects add-iam-policy-binding gen-lang-client-0540105794 \
+  --member="serviceAccount:employee-bq-mcp@gen-lang-client-0540105794.iam.gserviceaccount.com" \
+  --role="roles/bigquery.dataEditor"
+
+gcloud artifacts repositories create mcp-servers --repository-format=docker --location=us-central1 \
+  --project gen-lang-client-0540105794
+
+gcloud builds submit \
+  --tag us-central1-docker.pkg.dev/gen-lang-client-0540105794/mcp-servers/employee-bq-mcp:v1 \
+  --project gen-lang-client-0540105794
+
+gcloud run deploy employee-bq-mcp \
+  --image us-central1-docker.pkg.dev/gen-lang-client-0540105794/mcp-servers/employee-bq-mcp:v1 \
+  --region us-central1 \
+  --service-account employee-bq-mcp@gen-lang-client-0540105794.iam.gserviceaccount.com \
+  --set-env-vars GOOGLE_CLOUD_PROJECT=gen-lang-client-0540105794 \
+  --project gen-lang-client-0540105794
+```
+
+Use the agent with the Cloud Run server. `a027_mcp_bigquery/agent.py` points to:
+
+```python
+url="https://employee-bq-mcp-681195791124.us-central1.run.app/mcp/bq"
+```
+
+```bash
+adk web          # pick a027_mcp_bigquery; no local server needed
+```
+
+Ask *"Who is an AI engineer?"* and *"Add employee 104, Ravi, …"*, then check BigQuery: the row added through Cloud Run is there.
+
+Check the service:
+
+```bash
+gcloud run services logs read employee-bq-mcp --region us-central1 --project gen-lang-client-0540105794 --limit 20
+```
+
+> **The service is currently public:** a request without a token returns `HTTP 200`. Because `add_employee` writes to BigQuery, anyone with the URL can add rows. To make it private, remove public access and use the proxy, so `agent.py` can go back to `http://localhost:8002/mcp/bq`:
+> ```bash
+> gcloud run services remove-iam-policy-binding employee-bq-mcp --region us-central1 \
+>   --project gen-lang-client-0540105794 --member="allUsers" --role="roles/run.invoker"
+> gcloud run services proxy employee-bq-mcp --region us-central1 --port 8002 --project gen-lang-client-0540105794
+> ```
+> If the service was deployed with `--no-invoker-iam-check`, redeploy with `--invoker-iam-check` instead.
+
+### 18.6 Errors we hit
+
+| Error | Cause | Fix |
+|---|---|---|
+| `No module named 'mcp.server.fastmcp'` | `mcp` 2.x installed | `pip install "mcp<2"` |
+| `address already in use` / client `Session terminated` | Two programs on one port (often `adk web` on 8000) | Use another port, or stop the other program |
+| Agent answers from general knowledge (e.g. "I can't define an AI engineer") | The MCP server wasn't running, so the agent had no tools; the instruction was also too vague | Start `server.py` first; the a027 instruction now says which tool to use for IDs, departments, roles and names |
+| `429 RESOURCE_EXHAUSTED` | Gemini rate limit on Vertex AI (not BigQuery) | a027's `agent.py` retries automatically |
+| `INVALID_ARGUMENT` / `invalid image name ".../YOUR_PROJECT_ID/..."` | Placeholder left in the command | Use the real project ID |
+| `Service account -compute@developer… does not exist` | `${PROJECT_NUMBER}` was empty | Use the number directly (`681195791124-compute@…`) |
+| `Service account employee-bq-mcp already exists within project newaiproject-510015` | gcloud was set to the wrong project | `gcloud config set project gen-lang-client-0540105794`, and add `--project` to each command |
+| **Forbidden** in the browser | The service is private and the browser sends no token | Proxy, a token (`Authorization: Bearer $(gcloud auth print-identity-token)`), or make it public for testing |
+| **Not Found** / **Not Acceptable** in the browser | `/` isn't the MCP endpoint; MCP needs `POST` with JSON-RPC | Use `client.py`, `curl` or the MCP Inspector on the `/mcp…` URL |
+
+---
+
+## 19. Comparison
 
 ### Ways to deploy
 
@@ -935,7 +1209,7 @@ The agent code is the same for all three; only the line that creates the session
 
 ---
 
-## 19. Cleanup and cost
+## 20. Cleanup and cost
 
 Deployed services use billable resources, which draw down the free-trial credit first. Remove them after testing:
 
@@ -958,5 +1232,19 @@ bq rm -r -f --project_id=YOUR_PROJECT_ID hr_data
 Delete the a012 data store in the Console under **AI Applications → Data Stores**.
 
 Free up disk space from local models with `ollama rm gemma3` / `ollama rm llama3.2`.
+
+Remove the MCP deployments (a025, a027):
+
+```bash
+# a025
+gcloud run services delete employee-mcp --region us-central1 --project newaiproject-510015
+gcloud artifacts repositories delete mcp-servers --location us-central1 --project newaiproject-510015
+
+# a027
+gcloud run services delete employee-bq-mcp --region us-central1 --project gen-lang-client-0540105794
+gcloud artifacts repositories delete mcp-servers --location us-central1 --project gen-lang-client-0540105794
+gcloud iam service-accounts delete employee-bq-mcp@gen-lang-client-0540105794.iam.gserviceaccount.com --project gen-lang-client-0540105794
+bq rm -r -f gen-lang-client-0540105794:employee_mcp
+```
 
 Check spending under **Cloud Console → Billing**.
