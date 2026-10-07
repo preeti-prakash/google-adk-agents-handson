@@ -39,3 +39,6 @@ cloud_run_deploy_src/
 .DS_Store
 .idea/
 .vscode/
+
+# Personal learning notes (kept local, not pushed)
+TUTORIAL.md
